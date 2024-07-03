@@ -5,47 +5,45 @@ from django.contrib.auth import update_session_auth_hash
 from django.contrib.auth.models import User
 from django.core.mail import send_mail
 from django.contrib import messages
+from .forms import UserRegistrationForm
+from django.contrib.auth.forms import AuthenticationForm
 
 def home_view(request):
     return render(request, 'base.html')
 
 def login_view(request):
     if request.method == 'POST':
-        username = request.POST['username']
-        password = request.POST['password']
-        user = authenticate(request, username=username, password=password)
-        if user is not None:
-            login(request, user)
-            return redirect('dashboard')
-        else:
-            messages.error(request, 'Invalid username or password.')
-    return render(request, 'login.html')
+        form = AuthenticationForm(request, data=request.POST)
+        if form.is_valid():
+            username = form.cleaned_data.get('username')
+            password = form.cleaned_data.get('password')
+            user = authenticate(username=username, password=password)
+            if user is not None:
+                login(request, user)
+                return redirect('dashboard')
+            else:
+                messages.error(request, 'Invalid username or password.')
+    else:
+        form = AuthenticationForm()
+    return render(request, 'login.html', {'form': form})
 
 def signup_view(request):
     if request.method == 'POST':
-        username = request.POST['username']
-        email = request.POST['email']
-        password1 = request.POST['password1']
-        password2 = request.POST['password2']
-        
-        if password1 != password2:
-            messages.error(request, 'Passwords do not match.')
-        elif User.objects.filter(username=username).exists():
-            messages.error(request, 'Username already exists.')
-        elif User.objects.filter(email=email).exists():
-            messages.error(request, 'Email already exists.')
-        else:
-            user = User.objects.create_user(username=username, email=email, password=password1)
+        form = UserRegistrationForm(request.POST)
+        if form.is_valid():
+            new_user = form.save(commit=False)
+            new_user.set_password(form.cleaned_data['password1'])
+            new_user.save()
             return redirect('login')
-    return render(request, 'signup.html')
+    else:
+        form = UserRegistrationForm()
+    return render(request, 'signup.html', {'form': form})
 
 def forgot_password_view(request):
     if request.method == 'POST':
         email = request.POST['email']
         try:
             user = User.objects.get(email=email)
-            # Here you would typically generate a token and send an email
-            # For this example, we'll just show a success message
             messages.success(request, 'Password reset instructions sent to your email.')
             return redirect('login')
         except User.DoesNotExist:

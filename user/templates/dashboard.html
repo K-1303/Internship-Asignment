@@ -1,0 +1,16 @@
+{% extends 'base.html' %}
+
+{% block title %}Dashboard{% endblock %}
+
+{% block content %}
+<h2>Dashboard</h2>
+<p>Hi, {{ user.username }}!</p>
+<ul>
+    <li><a href="{% url 'profile' %}">View Profile</a></li>
+    <li><a href="{% url 'change_password' %}">Change Password</a></li>
+</ul>
+<form method="post" action="{% url 'logout' %}">
+    {% csrf_token %}
+    <button type="submit">Logout</button>
+</form>
+{% endblock %}

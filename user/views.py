@@ -5,8 +5,9 @@ from django.contrib.auth import update_session_auth_hash
 from django.contrib.auth.models import User
 from django.core.mail import send_mail
 from django.contrib import messages
-from .forms import UserRegistrationForm
+from .forms import CustomUserCreationForm
 from django.contrib.auth.forms import AuthenticationForm
+from django.contrib.auth.forms import PasswordChangeForm
 
 def home_view(request):
     return render(request, 'base.html')
@@ -29,14 +30,12 @@ def login_view(request):
 
 def signup_view(request):
     if request.method == 'POST':
-        form = UserRegistrationForm(request.POST)
+        form = CustomUserCreationForm(request.POST)
         if form.is_valid():
-            new_user = form.save(commit=False)
-            new_user.set_password(form.cleaned_data['password1'])
-            new_user.save()
+            form.save()
             return redirect('login')
     else:
-        form = UserRegistrationForm()
+        form = CustomUserCreationForm()
     return render(request, 'signup.html', {'form': form})
 
 def forgot_password_view(request):
@@ -53,21 +52,17 @@ def forgot_password_view(request):
 @login_required
 def change_password_view(request):
     if request.method == 'POST':
-        old_password = request.POST['old_password']
-        new_password1 = request.POST['new_password1']
-        new_password2 = request.POST['new_password2']
-        
-        if not request.user.check_password(old_password):
-            messages.error(request, 'Your old password was entered incorrectly.')
-        elif new_password1 != new_password2:
-            messages.error(request, "The two password fields didn't match.")
-        else:
-            request.user.set_password(new_password1)
-            request.user.save()
-            update_session_auth_hash(request, request.user)
+        form = PasswordChangeForm(request.user, request.POST)
+        if form.is_valid():
+            user = form.save()
+            update_session_auth_hash(request, user)  # Important!
             messages.success(request, 'Your password was successfully updated!')
             return redirect('dashboard')
-    return render(request, 'change_password.html')
+        else:
+            messages.error(request, 'Please correct the error below.')
+    else:
+        form = PasswordChangeForm(request.user)
+    return render(request, 'change_password.html', {'form': form})
 
 @login_required
 def dashboard_view(request):
